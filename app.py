@@ -94,6 +94,12 @@ fig_prod.update_layout(
 
 st.plotly_chart(fig_prod, use_container_width=True)
 
+
+
+# 7. TABEL DATA
+with st.expander("Lihat Detail Data Mentah"):
+    st.table(df)
+
 st.divider()
 st.subheader("📥 Ekspor Laporan")
 
@@ -117,12 +123,7 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     help="Klik untuk mengunduh seluruh data dalam format Excel"
 )
-
-# 7. TABEL DATA
-with st.expander("Lihat Detail Data Mentah"):
-    st.table(df)
-
-# 8. FOOTER CUSTOM
+# . FOOTER CUSTOM
 st.markdown("""
     <div class="custom-footer">
         © 2026 Garment Accounting System | Build with ❤️ using Python & Streamlit | <a href="https://github.com/agunggema-debug/dashboard-akuntansi.git" style="color: #2E86C1;">GitHub Repository</a>
