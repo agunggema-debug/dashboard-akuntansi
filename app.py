@@ -1,18 +1,19 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import io
+import plotly.graph_objects as go
+import plotly.express as px
 from datetime import datetime
 
 # 1. KONFIGURASI HALAMAN
-st.set_page_config(page_title="Garment Accounting Pro", page_icon="🧵", layout="wide")
+st.set_page_config(page_title="Garment Production Pro", page_icon="🧵", layout="wide")
 
-# 2. DATA UTAMA
+# 2. DATA UTAMA (Ditambah kolom Target)
 @st.cache_data
 def load_data():
     data = {
         'Bulan': ['Januari', 'Februari', 'Maret', 'April', 'Mei'],
-        'Realisasi': [4500, 5200, 4800, 6100, 5900],
+        'Realisasi': [4500, 5200, 4800, 6100, 5900], # Jumlah pcs garmen
         'Target': [5000, 5000, 5000, 6000, 6000],
         'Pendapatan': [50000000, 75000000, 60000000, 90000000, 85000000],
         'Pengeluaran': [30000000, 42000000, 35000000, 48000000, 40000000]
@@ -21,20 +22,9 @@ def load_data():
     df_result['Profit'] = df_result['Pendapatan'] - df_result['Pengeluaran']
     return df_result
 
-df_master = load_data()
+df = load_data()
 
-# 3. SIDEBAR FILTER
-st.sidebar.header("🔍 Filter Laporan")
-bulan_pilihan = st.sidebar.multiselect(
-    "Pilih Bulan:",
-    options=df_master['Bulan'].unique(),
-    default=df_master['Bulan'].unique()
-)
-
-# Filter Data Berdasarkan Pilihan
-df_filtered = df_master[df_master['Bulan'].isin(bulan_pilihan)]
-
-# 4. CUSTOM CSS (Dark Mode & Footer)
+# 3. CUSTOM CSS (Dark Mode & Footer)
 st.markdown("""
     <style>
     [data-testid="stMetric"] {
@@ -43,52 +33,74 @@ st.markdown("""
         padding: 15px;
         border-radius: 10px;
     }
+    footer {
+        visibility: hidden;
+    }
     .custom-footer {
-        position: fixed; left: 0; bottom: 0; width: 100%;
-        background-color: #0e1117; color: #777;
-        text-align: center; padding: 10px; font-size: 14px;
-        border-top: 1px solid #333; z-index: 100;
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #0e1117;
+        color: #777;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        border-top: 1px solid #333;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 5. HEADER & METRICS (Berdasarkan Data Terfilter)
+# 4. HEADER
 st.title("🧵 Garment Production & Accounting")
+st.write(f"Update Terakhir: {datetime.now().strftime('%d %B %Y')}")
+
+# 5. KPI METRICS
 col1, col2, col3 = st.columns(3)
-col1.metric("💰 Total Pendapatan", f"Rp {df_filtered['Pendapatan'].sum():,}")
-col2.metric("📉 Total Biaya", f"Rp {df_filtered['Pengeluaran'].sum():,}")
-col3.metric("💎 Net Profit", f"Rp {df_filtered['Profit'].sum():,}")
+col1.metric("📦 Total Produksi", f"{df['Realisasi'].sum():,} Pcs", "Realisasi")
+col2.metric("🎯 Total Target", f"{df['Target'].sum():,} Pcs", "Kapasitas")
+col3.metric("💰 Efisiensi Biaya", "88%", "+2.5%")
 
 st.divider()
 
-# 6. TABEL DENGAN FORMAT RUPIAH
-st.subheader("📝 Detail Transaksi (Format Rupiah)")
+# 6. GRAFIK TARGET VS REALISASI (Grouped Bar Chart)
+st.subheader("📊 Perbandingan Target vs Realisasi Produksi")
 
-df_display = df_filtered.copy()
+fig_prod = go.Figure()
 
-# Gunakan fungsi lambda untuk memformat agar checker tipe data senang
-st.dataframe(
-    df_display.style.format({
-        'Pendapatan': lambda x: f"Rp {x:,.0f}",
-        'Pengeluaran': lambda x: f"Rp {x:,.0f}",
-        'Profit': lambda x: f"Rp {x:,.0f}"
-    }), 
-    use_container_width=True
+# Bar untuk Target
+fig_prod.add_trace(go.Bar(
+    x=df['Bulan'],
+    y=df['Target'],
+    name='Target Produksi',
+    marker_color='rgba(158, 158, 158, 0.5)' # Abu-abu transparan
+))
+
+# Bar untuk Realisasi
+fig_prod.add_trace(go.Bar(
+    x=df['Bulan'],
+    y=df['Realisasi'],
+    name='Realisasi Produksi',
+    marker_color='#00CC96' # Hijau cerah
+))
+
+fig_prod.update_layout(
+    barmode='group', 
+    template="plotly_dark",
+    xaxis_title="Bulan",
+    yaxis_title="Jumlah (Pcs)",
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
 )
 
-# 7. FITUR EKSPOR (Hanya mengekspor data yang difilter)
-def to_excel(df_to_save):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df_to_save.to_excel(writer, index=False, sheet_name='Laporan_Filter')
-    return output.getvalue()
+st.plotly_chart(fig_prod, use_container_width=True)
 
-st.download_button(
-    label="📥 Download Data Terfilter ke Excel",
-    data=to_excel(df_filtered),
-    file_name=f"Laporan_Garmen_Filtered_{datetime.now().strftime('%H%M%S')}.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+
+
+# 7. TABEL DATA
+with st.expander("Lihat Detail Data Mentah"):
+    st.table(df)
+
+
 # . FOOTER CUSTOM
 st.markdown("""
     <div class="custom-footer">
