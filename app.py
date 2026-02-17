@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import io
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
@@ -93,6 +94,30 @@ fig_prod.update_layout(
 
 st.plotly_chart(fig_prod, use_container_width=True)
 
+st.divider()
+st.subheader("📥 Ekspor Laporan")
+
+# Fungsi untuk mengonversi DataFrame ke Excel
+def to_excel(df):
+    output = io.BytesIO()
+    # Menggunakan context manager agar file tertutup otomatis
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Laporan_Garmen')
+    processed_data = output.getvalue()
+    return processed_data
+
+# Membuat data excel
+excel_data = to_excel(df)
+
+# Tombol Unduh
+st.download_button(
+    label="Download Laporan Excel (XLSX)",
+    data=excel_data,
+    file_name=f"Laporan_Garmen_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    help="Klik untuk mengunduh seluruh data dalam format Excel"
+)
+
 # 7. TABEL DATA
 with st.expander("Lihat Detail Data Mentah"):
     st.table(df)
@@ -100,6 +125,6 @@ with st.expander("Lihat Detail Data Mentah"):
 # 8. FOOTER CUSTOM
 st.markdown("""
     <div class="custom-footer">
-        © 2026 Garment Accounting System | Build with ❤️ using Python & Streamlit | <a href="https://github.com/" style="color: #2E86C1;">GitHub Repository</a>
+        © 2026 Garment Accounting System | Build with ❤️ using Python & Streamlit | <a href="https://github.com/agunggema-debug/dashboard-akuntansi.git" style="color: #2E86C1;">GitHub Repository</a>
     </div>
     """, unsafe_allow_html=True)
