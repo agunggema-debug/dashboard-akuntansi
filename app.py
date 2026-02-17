@@ -18,11 +18,18 @@ def load_data():
         'Pendapatan': [50000000, 75000000, 60000000, 90000000, 85000000],
         'Pengeluaran': [30000000, 42000000, 35000000, 48000000, 40000000]
     }
+    # Data Kategori Pengeluaran (Contoh rata-rata per bulan)
+    data_kategori = {
+        'Kategori': ['Bahan Baku', 'Gaji Karyawan', 'Listrik & Air', 'Logistik', 'Maintenance'],
+        'Nilai': [45, 30, 10, 10, 5]  # Dalam persentase atau nilai total
+    }
+
     df_result = pd.DataFrame(data)
     df_result['Profit'] = df_result['Pendapatan'] - df_result['Pengeluaran']
-    return df_result
-    
-df = load_data()
+    df_kat= pd.DataFrame(data_kategori)
+    return df_result, df_kat
+
+df, df_kategori = load_data()
 # Memformat kolom angka menjadi Rupiah menggunakan Styler
 def format_rupiah(x):
     return f"Rp {x:,.0f}".replace(",", ".")
@@ -101,36 +108,32 @@ col3.metric("💎 Net Profit", f"Rp {df_filtered['Profit'].sum():,}")
 st.divider()
 
 
-# 8. GRAFIK TARGET VS REALISASI (Grouped Bar Chart)
-st.subheader("📊 Perbandingan Target vs Realisasi Produksi")
+# 8. GRAFIK TARGET VS REALISASI 
 
-fig_prod = go.Figure()
+# VISUALISASI: BAR CHART & PIE CHART
+col_grafik1, col_grafik2 = st.columns([6, 4])
 
-# Bar untuk Target
-fig_prod.add_trace(go.Bar(
-    x=df_filtered['Bulan'],
-    y=df_filtered['Target'],
-    name='Target Produksi',
-    marker_color='rgba(158, 158, 158, 0.5)' # Abu-abu transparan
-))
+with col_grafik1:
+    st.subheader("📊 Target vs Realisasi Produksi")
+    fig_prod = go.Figure()
+    fig_prod.add_trace(go.Bar(x=df_filtered['Bulan'], y=df_filtered['Target'], name='Target', marker_color='gray'))
+    fig_prod.add_trace(go.Bar(x=df_filtered['Bulan'], y=df_filtered['Realisasi'], name='Realisasi', marker_color='#00CC96'))
+    fig_prod.update_layout(barmode='group', template="plotly_dark", height=400)
+    st.plotly_chart(fig_prod, use_container_width=True)
 
-# Bar untuk Realisasi
-fig_prod.add_trace(go.Bar(
-    x=df_filtered['Bulan'],
-    y=df_filtered['Realisasi'],
-    name='Realisasi Produksi',
-    marker_color='#00CC96' # Hijau cerah
-))
+with col_grafik2:
+    st.subheader("🍕 Struktur Biaya")
+    fig_pie = px.pie(
+        df_kategori, 
+        values='Nilai', 
+        names='Kategori',
+        hole=0.4,
+        color_discrete_sequence=px.colors.sequential.RdBu,
+        template="plotly_dark"
+    )
+    fig_pie.update_layout(height=400)
+    st.plotly_chart(fig_pie, use_container_width=True)
 
-fig_prod.update_layout(
-    barmode='group', 
-    template="plotly_dark",
-    xaxis_title="Bulan",
-    yaxis_title="Jumlah (Pcs)",
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-)
-
-st.plotly_chart(fig_prod, use_container_width=True)
 
 # 9. TABEL DATA
 with st.expander("Lihat Detail Data Mentah"):
