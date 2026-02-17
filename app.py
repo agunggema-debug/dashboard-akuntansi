@@ -21,9 +21,11 @@ def load_data():
     df_result = pd.DataFrame(data)
     df_result['Profit'] = df_result['Pendapatan'] - df_result['Pengeluaran']
     return df_result
-
+    
 df = load_data()
-
+# Memformat kolom angka menjadi Rupiah menggunakan Styler
+def format_rupiah(x):
+    return f"Rp {x:,.0f}".replace(",", ".")
 # 3. CUSTOM CSS (Dark Mode & Footer)
 st.markdown("""
     <style>
@@ -51,35 +53,71 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 4. HEADER
+#4.  SIDEBAR FILTER
+st.sidebar.header("🔍 Filter Laporan")
+bulan_pilihan = st.sidebar.multiselect(
+    "Pilih Bulan:",
+    options=df['Bulan'].unique(),
+    default=df['Bulan'].unique()
+)
+
+# Filter Data Berdasarkan Pilihan
+df_filtered = df[df['Bulan'].isin(bulan_pilihan)]
+
+
+# 5. CUSTOM CSS (Dark Mode & Footer)
+st.markdown("""
+    <style>
+    [data-testid="stMetric"] {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        border-radius: 10px;
+    }
+    .custom-footer {
+        position: fixed; left: 0; bottom: 0; width: 100%;
+        background-color: #0e1117; color: #777;
+        text-align: center; padding: 10px; font-size: 14px;
+        border-top: 1px solid #333; z-index: 100;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 6. HEADER
 st.title("🧵 Garment Production & Accounting")
 st.write(f"Update Terakhir: {datetime.now().strftime('%d %B %Y')}")
 
-# 5. KPI METRICS
+# 7. KPI METRICS
 col1, col2, col3 = st.columns(3)
-col1.metric("📦 Total Produksi", f"{df['Realisasi'].sum():,} Pcs", "Realisasi")
-col2.metric("🎯 Total Target", f"{df['Target'].sum():,} Pcs", "Kapasitas")
+col1.metric("📦 Total Produksi", f"{df_filtered['Realisasi'].sum():,} Pcs", "Realisasi")
+col2.metric("🎯 Total Target", f"{df_filtered['Target'].sum():,} Pcs", "Kapasitas")
 col3.metric("💰 Efisiensi Biaya", "88%", "+2.5%")
+
+col1, col2, col3 = st.columns(3)
+col1.metric("💰 Total Pendapatan", f"Rp {df_filtered['Pendapatan'].sum():,}")
+col2.metric("📉 Total Biaya", f"Rp {df_filtered['Pengeluaran'].sum():,}")
+col3.metric("💎 Net Profit", f"Rp {df_filtered['Profit'].sum():,}")
 
 st.divider()
 
-# 6. GRAFIK TARGET VS REALISASI (Grouped Bar Chart)
+
+# 8. GRAFIK TARGET VS REALISASI (Grouped Bar Chart)
 st.subheader("📊 Perbandingan Target vs Realisasi Produksi")
 
 fig_prod = go.Figure()
 
 # Bar untuk Target
 fig_prod.add_trace(go.Bar(
-    x=df['Bulan'],
-    y=df['Target'],
+    x=df_filtered['Bulan'],
+    y=df_filtered['Target'],
     name='Target Produksi',
     marker_color='rgba(158, 158, 158, 0.5)' # Abu-abu transparan
 ))
 
 # Bar untuk Realisasi
 fig_prod.add_trace(go.Bar(
-    x=df['Bulan'],
-    y=df['Realisasi'],
+    x=df_filtered['Bulan'],
+    y=df_filtered['Realisasi'],
     name='Realisasi Produksi',
     marker_color='#00CC96' # Hijau cerah
 ))
@@ -94,11 +132,20 @@ fig_prod.update_layout(
 
 st.plotly_chart(fig_prod, use_container_width=True)
 
-
-
-# 7. TABEL DATA
+# 9. TABEL DATA
 with st.expander("Lihat Detail Data Mentah"):
-    st.table(df)
+    # 1. Salin dataframe agar data asli tidak berubah formatnya (penting untuk perhitungan)
+    df_raw_display = df_filtered.copy()
+
+    # 2. Definisikan kolom yang ingin diformat ke Rupiah
+    kolom_uang = ['Pendapatan', 'Pengeluaran', 'Profit']
+
+    # 3. Terapkan format Rupiah (Contoh: Rp 50.000.000)
+    for col in kolom_uang:
+        df_raw_display[col] = df_raw_display[col].apply(lambda x: f"Rp {x:,.0f}".replace(",", "."))
+
+    # 4. Tampilkan tabel
+    st.table(df_raw_display)
 
 st.divider()
 st.subheader("📥 Ekspor Laporan")
